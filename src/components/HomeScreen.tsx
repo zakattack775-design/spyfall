@@ -87,6 +87,16 @@ export function HomeScreen({ onJoin }: Props) {
               </div>
             </div>
           )}
+          <p className="text-center text-xs text-muted-foreground pt-2">
+            <a
+              href="https://github.com/zakattack775-design/spyfall"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              View on GitHub
+            </a>
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -18,7 +18,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["SpyfallServer"]
+      "new_sqlite_classes": ["SpyfallServer"]
     }
   ]
 }
