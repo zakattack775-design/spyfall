@@ -1,6 +1,13 @@
 import { Server, type Connection, routePartykitRequest } from "partyserver";
 import { LOCATIONS } from "./locations";
-import type { ClientMessage, ServerMessage, Player, Phase } from "./types";
+import { CHARACTERS } from "./characters";
+import type {
+  ClientMessage,
+  ServerMessage,
+  Player,
+  Phase,
+  GameMode,
+} from "./types";
 
 // ---- Environment type (Cloudflare bindings) ----
 type Env = {
@@ -16,6 +23,9 @@ type GameState = {
   accuserId: string | null;
   accusedId: string | null;
   votes: Map<string, boolean | null>; // playerId → vote
+  gameMode: GameMode;
+  timerEnabled: boolean;
+  timerEndTime: number | null; // Unix timestamp or null
 };
 
 // ---- The game server ----
@@ -28,6 +38,9 @@ export class SpyfallServer extends Server<Env> {
     accuserId: null,
     accusedId: null,
     votes: new Map(),
+    gameMode: "locations",
+    timerEnabled: false,
+    timerEndTime: null,
   };
 
   // When someone connects, they haven't joined yet — they need to send a "join" message
@@ -95,6 +108,9 @@ export class SpyfallServer extends Server<Env> {
       case "start":
         this.handleStart(connection);
         break;
+      case "updateSettings":
+        this.handleUpdateSettings(connection, msg.gameMode, msg.timerEnabled);
+        break;
       case "accuse":
         this.handleAccuse(connection, msg.accusedId);
         break;
@@ -135,6 +151,20 @@ export class SpyfallServer extends Server<Env> {
     this.broadcastState();
   }
 
+  handleUpdateSettings(
+    connection: Connection,
+    gameMode: GameMode,
+    timerEnabled: boolean
+  ) {
+    const player = this.state.players.get(connection.id);
+    if (!player?.isHost) return;
+    if (this.state.phase !== "lobby") return;
+
+    this.state.gameMode = gameMode;
+    this.state.timerEnabled = timerEnabled;
+    this.broadcastState();
+  }
+
   handleStart(connection: Connection) {
     const player = this.state.players.get(connection.id);
     if (!player?.isHost) return;
@@ -147,13 +177,21 @@ export class SpyfallServer extends Server<Env> {
       return;
     }
 
-    // Pick a random spy and location
+    // Pick a random spy
     const playerIds = [...this.state.players.keys()];
     this.state.spyId = playerIds[Math.floor(Math.random() * playerIds.length)];
-    this.state.location =
-      LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
-    this.state.phase = "playing";
 
+    // Pick from locations or characters based on mode
+    const pool =
+      this.state.gameMode === "characters" ? CHARACTERS : LOCATIONS;
+    this.state.location = pool[Math.floor(Math.random() * pool.length)];
+
+    // Set timer if enabled (7 minutes from now)
+    this.state.timerEndTime = this.state.timerEnabled
+      ? Date.now() + 7 * 60 * 1000
+      : null;
+
+    this.state.phase = "playing";
     this.broadcastState();
   }
 
@@ -211,11 +249,13 @@ export class SpyfallServer extends Server<Env> {
     if (!player?.isHost) return;
     if (this.state.phase !== "results") return;
 
+    // Preserve gameMode and timerEnabled — reset everything else
     this.state.phase = "lobby";
     this.state.spyId = null;
     this.state.location = null;
     this.state.accuserId = null;
     this.state.accusedId = null;
+    this.state.timerEndTime = null;
     this.state.votes.clear();
 
     this.broadcastState();
@@ -232,6 +272,9 @@ export class SpyfallServer extends Server<Env> {
       accuserId: null,
       accusedId: null,
       votes: new Map(),
+      gameMode: "locations",
+      timerEnabled: false,
+      timerEndTime: null,
     };
   }
 
@@ -255,10 +298,14 @@ export class SpyfallServer extends Server<Env> {
           phase: "lobby",
           players,
           you,
+          gameMode: this.state.gameMode,
+          timerEnabled: this.state.timerEnabled,
         });
         break;
 
-      case "playing":
+      case "playing": {
+        const pool =
+          this.state.gameMode === "characters" ? CHARACTERS : LOCATIONS;
         this.sendTo(connection, {
           type: "state",
           phase: "playing",
@@ -266,9 +313,12 @@ export class SpyfallServer extends Server<Env> {
           you,
           location:
             connection.id === this.state.spyId ? null : this.state.location!,
-          allLocations: LOCATIONS,
+          allLocations: pool,
+          gameMode: this.state.gameMode,
+          timerEndTime: this.state.timerEndTime,
         });
         break;
+      }
 
       case "voting":
         this.sendTo(connection, {
@@ -293,6 +343,7 @@ export class SpyfallServer extends Server<Env> {
           location: this.state.location!,
           accusedId: this.state.accusedId,
           spyCaught,
+          gameMode: this.state.gameMode,
         });
         break;
       }

@@ -1,4 +1,4 @@
-import type { Player } from "../types";
+import type { Player, GameMode } from "../types";
 import { Button } from "./ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -10,6 +10,7 @@ type Props = {
   location: string;
   accusedId: string | null;
   spyCaught: boolean;
+  gameMode: GameMode;
   onPlayAgain: () => void;
 };
 
@@ -20,6 +21,7 @@ export function ResultsScreen({
   location,
   accusedId,
   spyCaught,
+  gameMode,
   onPlayAgain,
 }: Props) {
   const spy = players.find((p) => p.id === spyId);
@@ -27,6 +29,9 @@ export function ResultsScreen({
 
   // If accusedId is null, the spy disconnected
   const spyDisconnected = accusedId === null;
+
+  const thingLabel =
+    gameMode === "characters" ? "The character was" : "The location was";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -52,8 +57,10 @@ export function ResultsScreen({
         <CardContent className="space-y-4">
           <div className="rounded-lg bg-secondary/50 p-4 space-y-2 text-center">
             <p className="text-sm text-muted-foreground">The spy was</p>
-            <p className="text-xl font-bold text-spy">{spy?.name ?? "Unknown"}</p>
-            <p className="text-sm text-muted-foreground mt-2">The location was</p>
+            <p className="text-xl font-bold text-spy">
+              {spy?.name ?? "Unknown"}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">{thingLabel}</p>
             <p className="text-xl font-bold text-safe">{location}</p>
           </div>
 

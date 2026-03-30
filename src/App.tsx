@@ -40,7 +40,12 @@ function GameRoom({ name, room }: { name: string; room: string }) {
           players={gameState.players}
           you={gameState.you}
           roomCode={room}
+          gameMode={gameState.gameMode}
+          timerEnabled={gameState.timerEnabled}
           onStart={() => send({ type: "start" })}
+          onUpdateSettings={(gameMode, timerEnabled) =>
+            send({ type: "updateSettings", gameMode, timerEnabled })
+          }
         />
       )}
 
@@ -50,6 +55,8 @@ function GameRoom({ name, room }: { name: string; room: string }) {
           you={gameState.you}
           location={gameState.location}
           allLocations={gameState.allLocations}
+          gameMode={gameState.gameMode}
+          timerEndTime={gameState.timerEndTime}
           onAccuse={(id) => send({ type: "accuse", accusedId: id })}
         />
       )}
@@ -73,6 +80,7 @@ function GameRoom({ name, room }: { name: string; room: string }) {
           location={gameState.location}
           accusedId={gameState.accusedId}
           spyCaught={gameState.spyCaught}
+          gameMode={gameState.gameMode}
           onPlayAgain={() => send({ type: "playAgain" })}
         />
       )}

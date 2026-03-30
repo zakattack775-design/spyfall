@@ -1,43 +1,78 @@
 import { useState } from "react";
-import type { Player } from "../types";
+import type { Player, GameMode } from "../types";
 import { Button } from "./ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
+import { useCountdown, formatTime } from "../hooks/useCountdown";
 
 type Props = {
   players: Player[];
   you: string;
   location: string | null; // null = you're the spy
   allLocations: string[];
+  gameMode: GameMode;
+  timerEndTime: number | null;
   onAccuse: (accusedId: string) => void;
 };
 
-export function PlayingScreen({ players, you, location, allLocations, onAccuse }: Props) {
+export function PlayingScreen({
+  players,
+  you,
+  location,
+  allLocations,
+  gameMode,
+  timerEndTime,
+  onAccuse,
+}: Props) {
   const [showAccuse, setShowAccuse] = useState(false);
   const isSpy = location === null;
+  const remaining = useCountdown(timerEndTime);
+
+  const thingLabel = gameMode === "characters" ? "character" : "location";
+  const listLabel =
+    gameMode === "characters" ? "Possible characters:" : "Possible locations:";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
+        {/* Timer */}
+        {remaining !== null && (
+          <div className="text-center">
+            {remaining > 0 ? (
+              <span
+                className={`text-2xl font-mono font-bold ${
+                  remaining < 60_000 ? "text-spy" : "text-muted-foreground"
+                }`}
+              >
+                {formatTime(remaining)}
+              </span>
+            ) : (
+              <span className="text-2xl font-bold text-spy">Time's up!</span>
+            )}
+          </div>
+        )}
+
         {/* Role card */}
         <Card className={isSpy ? "border-spy/50" : "border-safe/50"}>
           <CardHeader className="text-center">
-            <CardTitle className={`text-3xl ${isSpy ? "text-spy" : "text-safe"}`}>
+            <CardTitle
+              className={`text-3xl ${isSpy ? "text-spy" : "text-safe"}`}
+            >
               {isSpy ? "You are the Spy!" : location}
             </CardTitle>
             <p className="text-muted-foreground text-sm mt-2">
               {isSpy
-                ? "Figure out the location by asking clever questions!"
-                : "Ask questions to find the spy — but don't give away the location!"}
+                ? `Figure out the ${thingLabel} by asking clever questions!`
+                : `Ask questions to find the spy — but don't give away the ${thingLabel}!`}
             </p>
           </CardHeader>
         </Card>
 
-        {/* Spy's location reference */}
+        {/* Spy's reference list */}
         {isSpy && (
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Possible locations:
+                {listLabel}
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {allLocations.map((loc) => (
@@ -57,7 +92,9 @@ export function PlayingScreen({ players, you, location, allLocations, onAccuse }
         <Card>
           <CardContent className="pt-6 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-muted-foreground">Players</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Players
+              </h3>
               <Button
                 variant={showAccuse ? "secondary" : "destructive"}
                 size="sm"
