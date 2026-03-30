@@ -12,7 +12,7 @@ export function useGameSocket(room: string, name: string) {
   const [error, setError] = useState<string | null>(null);
 
   const socket = usePartySocket({
-    party: "spyfallserver",
+    party: "spyfall-server",
     room,
     onOpen() {
       // Automatically join with our name when the socket connects
